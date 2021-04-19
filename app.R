@@ -1,4 +1,8 @@
 library(shiny)
+library(devtools)
+#devtools::install_github("mdelacre/deffectsize",force=T)
+library(deffectsize)
+
 
 # Define UI 
 
@@ -13,7 +17,7 @@ ui <- fluidPage(
   ),
   
   fluidRow( # row 2: titles for descriptive AND estimator   
-    
+
     column(width=3,offset=2,
            h1(strong("Choose the estimator:"), style = "font-size:20px;")
     ),column(width=4,offset=2,
@@ -28,82 +32,160 @@ ui <- fluidPage(
   
   fluidRow( # row 3   
     
-    column(width=2,offset=1,
-              radioButtons("var", label="Assumption", choiceNames=list("Equal population variances not assumed","Equal population variances assumed"),choiceValues=list("No","Yes")),
-    ), column(width=2,offset=3,
-              numericInput(inputId="n1", label=withMathJax('\\(n_1\\) / \\(n_{control}:\\)'),value=20, min = 1, max = 1000000,step=1)
+    column(width=4,offset=1,
+              radioButtons("var", label="Assumption", inline=T,choiceNames=list("Equal population variances not assumed","Equal population variances assumed"),choiceValues=list("No","Yes")),
     ), column(width=2,offset=1,
-              numericInput(inputId="n2", label=withMathJax('\\(n_2\\) / \\(n_{experimental}:\\)'),value=20, min = 1, max = 1000000,step=1)
+              numericInput(inputId="N1", label=withMathJax('\\(n_1\\) / \\(n_{control}:\\)'),value=20, min = 1, max = 1000000,step=1)
+    ), column(width=2,offset=1,
+              numericInput(inputId="N2", label=withMathJax('\\(n_2\\) / \\(n_{experimental}:\\)'),value=20, min = 1, max = 1000000,step=1)
     )
     
     
   ),fluidRow( # row 4   
     
-    column(width=3,offset=1,
+    column(width=4,offset=1,
            wellPanel(
              checkboxInput("corr", "Correction for bias", TRUE),
 
              conditionalPanel(
                condition = "input.corr == 1 & input.var == 'No'",
-               radioButtons(inputId="ES1", label="Estimator", choiceNames=list(
-                 withMathJax(paste0('\\(Glass\\)',"'",'\\(s\\)'," ",'\\(g_s\\)')),
-                 withMathJax(paste0('\\(Shieh\\)',"'",'\\(s\\)'," ",'\\(g_s\\)')),
-                 withMathJax(paste0('\\(Hedges\\)',"' ",'\\(g^*_s\\)'))
-               ),choiceValues=list("Glass_g","Shieh_g","Hedgesprime_g"),inline=T)
+               checkboxGroupInput("Effsize",label = h3("Estimator"), 
+                                  choices = list("Glass's g" = 1,"Shieh's g" = 2,"Hedges' g*" = 3),
+                                     selected = 3,inline=T)
              ),conditionalPanel(
                condition = "input.corr == 1 & input.var == 'Yes'",
-               radioButtons(inputId="ES2", label="Estimator", choiceNames=list(withMathJax(paste0('\\(Hedges\\)',"' ",'\\(g_s\\)'))),choiceValues=list("Hedges_g"))
+               checkboxGroupInput("Effsize",label = h3("Estimator"), 
+                                  choices = list("Hedges'g" = 4),
+                                  selected = 4,inline=T)
              ),
              conditionalPanel(
                condition = "input.corr== 0 & input.var == 'No'",
-               radioButtons(inputId="ES3", label="Estimator", choiceNames=list(
-                 withMathJax(paste0('\\(Glass\\)',"'",'\\(s\\)'," ",'\\(d_s\\)')),
-                 withMathJax(paste0('\\(Shieh\\)',"'",'\\(s\\)'," ",'\\(d_s\\)')),
-                 withMathJax(paste0('\\(Cohen\\)',"'",'\\(s\\)'," ",'\\(d^*_s\\)'))
-               ),choiceValues=list("Glass_d","Shieh_d","Hedgesprime_d"),inline=T)
+               checkboxGroupInput("Effsize",label = h3("Estimator"), 
+                                  choices = list("Glass's d" = 5,"Shieh's d" = 6,"Hedges' d*" = 7),
+                                  selected = 7,inline=T)
              ),
              conditionalPanel(
                condition = "input.corr== 0 & input.var == 'Yes'",
-               radioButtons(inputId="ES4", label="Estimator", choiceNames=list(withMathJax(paste0('\\(Cohen\\)',"'",'\\(s\\)'," ",'\\(d_s\\)'))),choiceValues=list("Cohen_d"))
+               checkboxGroupInput("Effsize",label = h3("Estimator"), 
+                                  choices = list("Cohen's d" = 8),
+                                  selected = 8,inline=T)
              )
-             
-                              
 
         ),
 
            
-    ), column(width=2,offset=2,
-              numericInput("m1", label=withMathJax('\\(m_1:\\)'), value=0, min = -1000000, max = 1000000,step=.001)
+    ), column(width=2,offset=1,
+              numericInput("M1", label=withMathJax('\\(\\bar{X_1}\\):'), value=0, min = -1000000, max = 1000000,step=.001),
+              numericInput("S1", label=withMathJax('\\(s_1:\\)'), value=2, min = 1, max = 1000000,step=.001)
 
     ), column(width=2,offset=1,
-              numericInput("m2", label=withMathJax('\\(m_2:\\)'), value=0, min = -1000000, max = 1000000,step=.001)
+              numericInput("M2", label=withMathJax('\\(\\bar{X_2}\\):'), value=0, min = -1000000, max = 1000000,step=.001),
+              numericInput("S2", label=withMathJax('\\(s_2:\\)'), value=2, min = 1, max = 1000000,step=.001)
     )
     
   ),fluidRow( # row 5   
     
-    column(width=5,offset=1,
-           numericInput("alpha", label="Choose the nominal alpha level for the C.I.:", value=.05, min = .001, max = 1,step=.001)
-           
-    ),column(width=2,offset=0,
-             numericInput("s1", label=withMathJax('\\(s_1:\\)'), value=NULL, min = 1, max = 1000000,step=.001)
-             
-    ),column(width=2,offset=1,
-             numericInput("s2", label=withMathJax('\\(s_2:\\)'), value=NULL, min = 1, max = 1000000,step=.001)
-             
-    )  
+    column(width=2,offset=1,
+
+           radioButtons(inputId="hyp", label="Hypothesis:", choiceNames=list(
+             withMathJax(paste0('\\(\\mu_1\\)'," \\(\\neq\\) ",'\\(\\mu_2\\)')),
+             withMathJax(paste0('\\(\\mu_1\\)'," < ",'\\(\\mu_2\\)')),
+             withMathJax(paste0('\\(\\mu_1\\)'," > ",'\\(\\mu_2\\)'))
+           ),choiceValues=list("two.sided","less","greater"))),
     
+    column(width=2,offset=0,
+
+           numericInput("alpha", label="Nominal \\(\\alpha\\) level:", value=.05, min = .001, max = 1,step=.001)
+
+  ),fluidRow( br(),br(),
+    
+  ),
+  
+  wellPanel(
+    
+  fluidRow( # row 6   
+      column(width=4,offset=2,
+             textOutput("text")
+          )
+           
+    ), fluidRow(
+  
+      column(width=4,offset=1,
+             tableOutput("table")
+      )    
+      
+    ), fluidRow(
+
+      column(width=5,offset=1,
+             plotOutput("plot")
+             
+    )
+  
+)
+  )
     
   )
   
 )
 
+
 # Define server logic to plot various variables against mpg ----
-server <- function(input, output) {
+server = function(input, output) {
+
+  output$text <-  renderText(paste((1-input$alpha)*100,"% Confidence interval:"))
+    
+  output$table <- renderTable(
+
+    if(input$corr == 1 & input$var == 'No'){
+      
+        if (is.null(input$Effsize)){return(NULL)}
+      
+        glass <- 1       %in% input$Effsize
+        shieh <- 2       %in% input$Effsize
+        hedges <- 3      %in% input$Effsize
+
+        CI_out1<-deffectsize::glass_CI(m1=input$M1,input$M2,input$S1,input$S2,input$N1,input$N2,1-input$alpha,unbiased=T, input$hyp)
+        CI_out2<-deffectsize::shieh_CI(m1=input$M1,m2=input$M2,input$S1,input$S2,input$N1,input$N2,1-input$alpha,unbiased=T, alternative=input$hyp)
+        CI_out3<-deffectsize::cohen_CI(m1=input$M1,m2=input$M2,input$S1,input$S2,input$N1,input$N2,1-input$alpha,var.equal=FALSE,unbiased=T, alternative=input$hyp)
+      
+        df1 <- data.frame(Estimator = "Glass's g",
+                          Estimate = as.numeric(round(CI_out1$ES,3)),
+                          Lower = as.numeric(round(CI_out1$CI[1],3)), 
+                          Upper = as.numeric(round(CI_out1$CI[2],3)))
+      
+        df2 <- data.frame(Estimator = "Shieh's g",
+                          Estimate = as.numeric(round(CI_out2$ES,3)),
+                          Lower = as.numeric(round(CI_out2$CI[1],3)), 
+                          Upper = as.numeric(round(CI_out2$CI[2],3)))
+      
+        df3 <- data.frame(Estimator = "Hedges' g*",
+                          Estimate = as.numeric(round(CI_out3$ES,3)),
+                          Lower = as.numeric(round(CI_out3$CI[1],3)), 
+                          Upper = as.numeric(round(CI_out3$CI[2],3)))
   
+        if (glass & shieh & hedges){df <- rbind(df1,df2,df3)
+        } else if (glass & shieh){df <- rbind(df1,df2)
+        } else if (glass & hedges){df <- rbind(df1,df3)
+        } else if (shieh & hedges){df <- rbind(df2,df3)
+        } else if (glass){df <- df1
+        } else if (shieh){df <- df2 
+        } else if (hedges){df <- df3 
+        }
+      
+      
+      } else if(input$corr == 0 & input$var == 'No'){
+      } else if (input$corr == 1 & input$var == 'Yes') {
+      } else if (input$corr == 0 & input$var == 'Yes') {
+     }
+  
+   )
+
 }
+
+
 
 shinyApp(ui,server)
 
 
-?checkboxInput()
-"checkbox", "Choice A", value = TRUE))
+#regarder ça pour continuer
+
