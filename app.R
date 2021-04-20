@@ -104,14 +104,14 @@ ui <- fluidPage(
   wellPanel(
     
   fluidRow( # row 6   
-      column(width=4,offset=2,
+      column(width=4,offset=3,
              br(),br(),br(),
              textOutput("text")
           )
            
     ), fluidRow(
   
-      column(width=4,offset=1,
+      column(width=4,offset=2,
              tableOutput("table")
       )    
       
@@ -232,9 +232,9 @@ server = function(input, output) {
         CI_out8<-deffectsize::cohen_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,var.equal=T,unbiased=F, alternative=input$hyp)
         
         df8 <- data.frame(Estimator = "Cohen'd d",
-                         Estimate = as.numeric(round(CI_out1$ES,3)),
-                         Lower = as.numeric(round(CI_out1$CI[1],3)), 
-                         Upper = as.numeric(round(CI_out1$CI[2],3)))
+                         Estimate = as.numeric(round(CI_out8$ES,3)),
+                         Lower = as.numeric(round(CI_out8$CI[1],3)), 
+                         Upper = as.numeric(round(CI_out8$CI[2],3)))
 
         if (Hedges_g){df <- df8}
         
