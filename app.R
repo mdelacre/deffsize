@@ -1,8 +1,41 @@
 library(shiny)
 library(devtools)
-#devtools::install_github("mdelacre/deffectsize",force=T)
 library(deffectsize)
+library(ggplot2)
+library(distributional)
+library(ggdist)
 
+
+# Function to return a plot (script from Aaron Caldwell)
+plot_smd <- function(lambda,    # ncp
+                     df,        # degrees of freedom
+                     mult,
+                     est,
+                     b_inf,
+                     b_sup)
+{
+  
+  
+  x_dt <- seq(qt(.0001,df,lambda), qt(.9999,df,lambda), by = 0.001)
+  y_dt <- dt(x_dt, df = df, ncp = lambda)
+  
+  x <- mult*x_dt # mult = sqrt(1/n1+1/n2) pour le d  de Cohen
+  y <- y_dt/mult # mult = sqrt(1/n1+1/n2) pour le d  de Cohen
+  plot(x,y,  
+       type = "l", 
+       las=1,
+       bty="n",
+       yaxt="n",
+       ylab="",
+       xlab=""
+  )
+
+  polygon(c(min(x),x[x>=min(x) & x <=max(x)],max(x)),c(0,y[x>=min(x) & x <= max(x)],0), col="lightskyblue1")
+  polygon(c(b_inf,x[x>=b_inf & x <=b_sup],b_sup),c(0,y[x>=b_inf & x <= b_sup],0), col="steelblue3")
+  points(est,0,pch=15)
+  segments(b_inf,0,b_sup,0,lwd=4)
+  legend("top",legend="95% Confidence interval",col="steelblue3",pch=15,bty="n")  
+}
 
 # Define UI 
 
@@ -104,20 +137,20 @@ ui <- fluidPage(
   wellPanel(
     
   fluidRow( # row 6   
-      column(width=4,offset=3,
-             br(),br(),br(),
+      column(width=4,offset=6,
+             br(),
              textOutput("text")
           )
            
     ), fluidRow(
   
-      column(width=4,offset=2,
+      column(width=4,offset=5,
              tableOutput("table")
       )    
       
     ), fluidRow(
 
-      column(width=5,offset=1,
+      column(width=5,offset=4,
              plotOutput("plot")
              
     )
@@ -212,7 +245,7 @@ server = function(input, output) {
         
       } else if (input$corr == 1 & input$var == 'Yes') {
 
-        Cohen_d <- 4       %in% input$EffsizeUHom
+        Hedges_g <- 4       %in% input$EffsizeUHom
         
         CI_out4<-deffectsize::cohen_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,var.equal=T,unbiased=T, alternative=input$hyp)
         
@@ -221,13 +254,13 @@ server = function(input, output) {
                           Lower = as.numeric(round(CI_out4$CI[1],3)), 
                           Upper = as.numeric(round(CI_out4$CI[2],3)))
         
-        if (Cohen_d){df <- df4}
+        if (Hedges_g){df <- df4}
         
         format.data.frame(df, digits = 3)
         
       } else if (input$corr == 0 & input$var == 'Yes') {
 
-        Hedges_g <- 8       %in% input$EffsizeBHom
+        Cohen_d <- 8       %in% input$EffsizeBHom
         
         CI_out8<-deffectsize::cohen_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,var.equal=T,unbiased=F, alternative=input$hyp)
         
@@ -236,20 +269,149 @@ server = function(input, output) {
                          Lower = as.numeric(round(CI_out8$CI[1],3)), 
                          Upper = as.numeric(round(CI_out8$CI[2],3)))
 
-        if (Hedges_g){df <- df8}
+        if (Cohen_d){df <- df8}
         
         format.data.frame(df, digits = 3)
         
      }
   
    )
+  
+
+  output$plot <- renderPlot(
+    
+    if(input$corr == 1 & input$var == 'No'){
+      
+        Glass_g <- 1            %in% input$EffsizeUHet
+        Shieh_g <- 2            %in% input$EffsizeUHet
+        Hedges_gprime <- 3      %in% input$EffsizeUHet
+
+        CI_out1<-deffectsize::glass_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,unbiased=T, input$hyp)
+        CI_out2<-deffectsize::shieh_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,unbiased=T, alternative=input$hyp)
+        CI_out3<-deffectsize::cohen_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,var.equal=FALSE,unbiased=T, alternative=input$hyp)
+        
+        if(Glass_g){
+        
+          est <- CI_out1$ES
+          b_inf <- CI_out1$CI[1]
+          b_sup <- CI_out1$CI[2]
+          
+          ncp <- ((input$M1-input$M2)/(input$S1*sqrt(1/input$N1+input$S2^2/(input$N2*input$S1^2)))) 
+          df <- input$N1-1
+          mult <- sqrt(1/input$N1+input$S2^2/(input$N2*input$S1^2))
+          plot_smd(lambda=ncp,df=df,mult= mult, est = est, b_inf = b_inf, b_sup=b_sup)
+          
+        } else if (Shieh_g){
+        
+          est <- CI_out2$ES
+          b_inf <- CI_out2$CI[1]
+          b_sup <- CI_out2$CI[2]
+          
+          ncp <- (input$M1-input$M2)/ sqrt(input$S1^2/input$N1+input$S2^2/input$N2)
+          df <- ((input$S1^2/input$N1+input$S2^2/input$N2)^2)/((input$S1^2/input$N1)^2/(input$N1-1)+(input$S2^2/input$N2)^2/(input$N2-1))
+          mult <- 1/sqrt(input$N1+input$N2)
+          plot_smd(lambda=ncp,df=df,mult= mult, est = est, b_inf = b_inf, b_sup=b_sup)
+          
+        } else if (Hedges_gprime){
+        
+          est <- CI_out3$ES
+          b_inf <- CI_out3$CI[1]
+          b_sup <- CI_out3$CI[2]
+          
+          ncp <- (input$M1-input$M2)/ sqrt(input$S1^2/input$N1+input$S2^2/input$N2)
+          df <- ((input$N1-1)*(input$N2-1)*(input$S1^2+input$S2^2)^2)/((input$N2-1)*input$S1^4+(input$N1-1)*input$S2^4)
+          mult <- sqrt((2*(input$N2*input$S1^2+input$N1*input$S2^2))/(input$N1*input$N2*(input$S1^2+input$S2^2)))
+          plot_smd(lambda=ncp,df=df,mult= mult, est = est, b_inf = b_inf, b_sup=b_sup)
+          
+        }
+      
+    } else if (input$corr == 0 & input$var == 'No'){
+      
+        Glass_d <- 5       %in% input$EffsizeBHet
+        Shieh_d <- 6       %in% input$EffsizeBHet
+        Hedges_dprime <- 7      %in% input$EffsizeBHet
+
+        CI_out5<-deffectsize::glass_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,unbiased=F, input$hyp)
+        CI_out6<-deffectsize::shieh_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,unbiased=F, alternative=input$hyp)
+        CI_out7<-deffectsize::cohen_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,var.equal=FALSE,unbiased=F, alternative=input$hyp)
+
+        if(Glass_d){
+          
+          est <- CI_out5$ES
+          b_inf <- CI_out5$CI[1]
+          b_sup <- CI_out5$CI[2]
+          
+          ncp <- ((input$M1-input$M2)/(input$S1*sqrt(1/input$N1+input$S2^2/(input$N2*input$S1^2)))) 
+          df <- input$N1-1
+          mult <- sqrt(1/input$N1+input$S2^2/(input$N2*input$S1^2))
+          plot_smd(lambda=ncp,df=df,mult= mult, est = est, b_inf = b_inf, b_sup=b_sup)
+          
+        
+        } else if(Shieh_d){
+
+          est <- CI_out6$ES
+          b_inf <- CI_out6$CI[1]
+          b_sup <- CI_out6$CI[2]
+          
+          ncp <- (input$M1-input$M2)/ sqrt(input$S1^2/input$N1+input$S2^2/input$N2)
+          df <- ((input$S1^2/input$N1+input$S2^2/input$N2)^2)/((input$S1^2/input$N1)^2/(input$N1-1)+(input$S2^2/input$N2)^2/(input$N2-1))
+          mult <- 1/sqrt(input$N1+input$N2)
+          plot_smd(lambda=ncp,df=df,mult= mult, est = est, b_inf = b_inf, b_sup=b_sup)
+          
+        } else if (Hedges_dprime){
+          
+          est <- CI_out7$ES
+          b_inf <- CI_out7$CI[1]
+          b_sup <- CI_out7$CI[2]
+          
+          ncp <- (input$M1-input$M2)/ sqrt(input$S1^2/input$N1+input$S2^2/input$N2)
+          df <- ((input$N1-1)*(input$N2-1)*(input$S1^2+input$S2^2)^2)/((input$N2-1)*input$S1^4+(input$N1-1)*input$S2^4)
+          mult <- sqrt((2*(input$N2*input$S1^2+input$N1*input$S2^2))/(input$N1*input$N2*(input$S1^2+input$S2^2)))
+          plot_smd(lambda=ncp,df=df,mult= mult, est = est, b_inf = b_inf, b_sup=b_sup)
+          
+          }
+
+    } else if (input$corr == 1 & input$var == 'Yes'){
+      
+      Hedges_g <- 4       %in% input$EffsizeUHom
+      
+      CI_out4<-deffectsize::cohen_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,var.equal=T,unbiased=T, alternative=input$hyp)
+      est <- CI_out4$ES
+      b_inf <- CI_out4$CI[1]
+      b_sup <- CI_out4$CI[2]
+
+      if(Hedges_g){
+
+        lambda <- (input$M1-input$M2)/ (sqrt(((input$N1-1)*input$S1^2+(input$N2-1)*input$S2^2)/(input$N1+input$N2-2))*sqrt(1/input$N1+1/input$N2))
+        df <- input$N1+input$N2-2
+        mult <- sqrt(1/input$N1+1/input$N2)
+        plot_smd(lambda=ncp,df=df,mult= mult, est = est, b_inf = b_inf, b_sup=b_sup)
+        
+      } 
+      
+    } else if (input$corr == 0 & input$var == 'Yes'){
+      
+      Cohen_d <- 8       %in% input$EffsizeBHom
+
+      CI_out8<-deffectsize::cohen_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,var.equal=T,unbiased=F, alternative=input$hyp)
+      est <- CI_out8$ES
+      b_inf <- CI_out8$CI[1]
+      b_sup <- CI_out8$CI[2]
+
+      if(Cohen_d){
+
+        lambda <- (input$M1-input$M2)/ (sqrt(((input$N1-1)*input$S1^2+(input$N2-1)*input$S2^2)/(input$N1+input$N2-2))*sqrt(1/input$N1+1/input$N2))
+        df <- input$N1+input$N2-2
+        mult <- sqrt(1/input$N1+1/input$N2)
+        plot_smd(lambda=ncp,df=df,mult= mult, est = est, b_inf = b_inf, b_sup=b_sup)
+        
+      } 
+      
+    }
+    
+  )   
+  
 
 }
 
-
-
 shinyApp(ui,server)
-
-
-#regarder ça pour continuer
-
