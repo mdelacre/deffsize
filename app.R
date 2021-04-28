@@ -150,6 +150,7 @@ server = function(input, output) {
   
   output$text <-  renderText(paste((1-input$alpha)*100,"% Confidence interval:"))
   
+  # Should move 
   observeEvent(input$designBut, {
     
   output$table <- renderTable(
