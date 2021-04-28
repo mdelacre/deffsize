@@ -1,42 +1,20 @@
+#install_github("mdelacre/deffectsize")
+
 library(shiny)
 library(devtools)
 library(deffectsize)
 library(ggplot2)
 library(distributional)
 library(ggdist)
+library(grid)
+library(gridExtra)
+library(ggpubr)
 
+#  (c) from Aaron Caldwell
 
-# Function to return a plot (script from Aaron Caldwell)
-plot_smd <- function(lambda,    # ncp
-                     df,        # degrees of freedom
-                     mult,
-                     est,
-                     b_inf,
-                     b_sup)
-{
-  
-  
-  x_dt <- seq(qt(.0001,df,lambda), qt(.9999,df,lambda), by = 0.001)
-  y_dt <- dt(x_dt, df = df, ncp = lambda)
-  
-  x <- mult*x_dt # mult = sqrt(1/n1+1/n2) pour le d  de Cohen
-  y <- y_dt/mult # mult = sqrt(1/n1+1/n2) pour le d  de Cohen
-  plot(x,y,  
-       type = "l", 
-       las=1,
-       bty="n",
-       yaxt="n",
-       ylab="",
-       xlab=""
-  )
-
-  polygon(c(min(x),x[x>=min(x) & x <=max(x)],max(x)),c(0,y[x>=min(x) & x <= max(x)],0), col="lightskyblue1")
-  polygon(c(b_inf,x[x>=b_inf & x <=b_sup],b_sup),c(0,y[x>=b_inf & x <= b_sup],0), col="steelblue3")
-  points(est,0,pch=15)
-  segments(b_inf,0,b_sup,0,lwd=4)
-  legend("top",legend="95% Confidence interval",col="steelblue3",pch=15,bty="n")  
-}
-
+source("gg_curv_t.R")
+source("plot_smd_cdf.R")
+source("curv_scripts.R")
 # Define UI 
 
 ui <- fluidPage(
@@ -128,7 +106,10 @@ ui <- fluidPage(
     
     column(width=2,offset=0,
 
-           numericInput("alpha", label="Nominal \\(\\alpha\\) level:", value=.05, min = .001, max = 1,step=.001)
+           numericInput("alpha", label="Nominal \\(\\alpha\\) level:", value=.05, min = .001, max = 1,step=.001),
+           # Add button 
+           actionButton("designBut","Compute",
+                        icon = icon("check-square"))
 
   ),fluidRow( br(),br(),
     
@@ -150,7 +131,7 @@ ui <- fluidPage(
       
     ), fluidRow(
 
-      column(width=5,offset=4,
+      column(width=12,offset=0,
              plotOutput("plot")
              
     )
@@ -168,6 +149,8 @@ server = function(input, output) {
 
   
   output$text <-  renderText(paste((1-input$alpha)*100,"% Confidence interval:"))
+  
+  observeEvent(input$designBut, {
     
   output$table <- renderTable(
 
@@ -180,7 +163,7 @@ server = function(input, output) {
         CI_out1<-deffectsize::glass_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,unbiased=T, input$hyp)
         CI_out2<-deffectsize::shieh_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,unbiased=T, alternative=input$hyp)
         CI_out3<-deffectsize::cohen_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,var.equal=FALSE,unbiased=T, alternative=input$hyp)
-      
+
         df1 <- data.frame(Estimator = "Glass's g",
                           Estimate = as.numeric(round(CI_out1$ES,3)),
                           Lower = as.numeric(round(CI_out1$CI[1],3)), 
@@ -264,7 +247,7 @@ server = function(input, output) {
         
         CI_out8<-deffectsize::cohen_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,var.equal=T,unbiased=F, alternative=input$hyp)
         
-        df8 <- data.frame(Estimator = "Cohen'd d",
+        df8 <- data.frame(Estimator = "Cohen's d",
                          Estimate = as.numeric(round(CI_out8$ES,3)),
                          Lower = as.numeric(round(CI_out8$CI[1],3)), 
                          Upper = as.numeric(round(CI_out8$CI[2],3)))
@@ -275,143 +258,380 @@ server = function(input, output) {
         
      }
   
-   )
-  
+   ) 
 
   output$plot <- renderPlot(
     
     if(input$corr == 1 & input$var == 'No'){
-      
+
+        M1 <- input$M1
+        M2 <- input$M2
+        SD1 <- input$S1
+        SD2 <- input$S2
+        N1 <- input$N1
+        N2 <- input$N2
+        UNBIASED <- T
+        ALT <- input$hyp
+
         Glass_g <- 1            %in% input$EffsizeUHet
         Shieh_g <- 2            %in% input$EffsizeUHet
         Hedges_gprime <- 3      %in% input$EffsizeUHet
 
-        CI_out1<-deffectsize::glass_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,unbiased=T, input$hyp)
-        CI_out2<-deffectsize::shieh_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,unbiased=T, alternative=input$hyp)
-        CI_out3<-deffectsize::cohen_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,var.equal=FALSE,unbiased=T, alternative=input$hyp)
+        FCT1 <- glass_CI
+        DF1 <- N1-1
+        #DF <- input$N1-1
+        LAMBDA1 <- (M1-M2)/(SD1*sqrt(1/N1+SD2^2/(N2*SD1^2)))
+        #LAMBDA <- ((input$M1-input$M2)/(input$S1*sqrt(1/input$N1+input$S2^2/(input$N2*input$S1^2)))) 
+        LABEL1 = "Glass's g"
+        corr1 <- gamma(DF1/2)/(sqrt(DF1/2)*gamma((DF1-1)/2))
+        MULT1 <- sqrt(1/N1+SD2^2/(N2*SD1^2))*corr1
+        #MULT <- sqrt(1/input$N1+input$S2^2/(input$N2*input$S1^2))*corr
+        CONF.LEVEL1 <-  1-input$alpha
         
-        if(Glass_g){
         
-          est <- CI_out1$ES
-          b_inf <- CI_out1$CI[1]
-          b_sup <- CI_out1$CI[2]
+        DF2 <- ((SD1^2/N1+SD2^2/N2)^2)/((SD1^2/N1)^2/(N1-1)+(SD2^2/N2)^2/(N2-1))
+        #DF <- ((input$S1^2/input$N1+input$S2^2/input$N2)^2)/((input$S1^2/input$N1)^2/(input$N1-1)+(input$S2^2/input$N2)^2/(input$N2-1))
+        LAMBDA2 <- (M1-M2)/ sqrt(SD1^2/N1+SD2^2/N2)  
+        #LAMBDA <- (input$M1-input$M2)/ sqrt(input$S1^2/input$N1+input$S2^2/input$N2)  
+        LABEL2 = "Shieh's g"
+        FCT2 <- shieh_CI
+        corr2 <- gamma(DF2/2)/(sqrt(DF2/2)*gamma((DF2-1)/2))
+        MULT2 <- 1/sqrt(N1+N2)*corr2
+        #MULT <- 1/sqrt(input$N1+input$N2)*corr
+        CONF.LEVEL2 <-  1-input$alpha
+        
+        DF3 <- ((N1-1)*(N2-1)*(SD1^2+SD2^2)^2)/((N2-1)*SD1^4+(N1-1)*SD2^4)
+        #DF <- ((input$N1-1)*(input$N2-1)*(input$S1^2+input$S2^2)^2)/((input$N2-1)*input$S1^4+(input$N1-1)*input$S2^4)
+        LAMBDA3 <- (M1-M2)/ sqrt(SD1^2/N1+SD2^2/N2)
+        #LAMBDA <- (input$M1-input$M2)/ sqrt(input$S1^2/input$N1+input$S2^2/input$N2)  
+        LABEL3 = "Hedges' g*"
+        FCT3 <- cohen_CI
+        VAR.EQUAL=F
+        corr3 <- gamma(DF3/2)/(sqrt(DF3/2)*gamma((DF3-1)/2))
+        MULT3 <- sqrt(1/N1+1/N2)*corr3
+        #MULT <- sqrt(1/input$N1+1/input$N2)*corr
+        CONF.LEVEL3 <-  1-input$alpha
+        
+        cdfdat1 = cohen_curv(m1=M1,m2=M2,
+                             sd1=SD1,sd2=SD2,
+                             n1=N1,n2=N2,
+                             steps = 1000,
+                             corr = UNBIASED,
+                             var.equal = FALSE)
+
+        plot1 <- plot_cohen_curv(smd_label = LABEL1,
+                               m1=M1,m2=M2,
+                               sd1=SD1,sd2=SD2,
+                               n1=N1,n2=N2,
+                               cdf_dat = cdfdat1[[2]],
+                               corr = UNBIASED,
+                               var.equal = FALSE,
+                               ci_shades = c(.5, .90, .95, .99),
+                               ci_line = CONF.LEVEL1)
+        
+        cdfdat2 = glass_curv(m1=M1,m2=M2,
+                             sd1=SD1,sd2=SD2,
+                             n1=N1,n2=N2,
+                             steps = 1000,
+                             corr = UNBIASED)
+        
+        plot2 <- plot_glass_curv(smd_label = LABEL2,
+                               m1=M1,m2=M2,
+                               sd1=SD1,sd2=SD2,
+                               n1=N1,n2=N2,
+                               cdf_dat = cdfdat2[[2]],
+                               corr = UNBIASED,
+                               ci_shades = c(.5, .90, .95, .99),
+                               ci_line = CONF.LEVEL2)
+        
+        cdfdat3 = shieh_curv(m1=M1,m2=M2,
+                             sd1=SD1,sd2=SD2,
+                             n1=N1,n2=N2,
+                             steps = 1000,
+                             corr = UNBIASED)
+        
+        plot3 <- plot_shieh_curv(smd_label = LABEL3,
+                               m1=M1,m2=M2,
+                               sd1=SD1,sd2=SD2,
+                               n1=N1,n2=N2,
+                               cdf_dat = cdfdat3[[2]],
+                               corr = UNBIASED,
+                               ci_shades = c(.5, .90, .95, .99),
+                               ci_line = CONF.LEVEL3)
+        
+        if (Glass_g & Shieh_g & Hedges_gprime){
+        
+          ggarrange(plot1, plot2, plot3, 
+                    ncol = 3, nrow = 1,
+                    common.legend = TRUE)
+
+        } else if (Glass_g & Shieh_g){
+
+          ggarrange(plot1, plot2, 
+                    ncol = 2, nrow = 1,
+                    common.legend = TRUE)
           
-          ncp <- ((input$M1-input$M2)/(input$S1*sqrt(1/input$N1+input$S2^2/(input$N2*input$S1^2)))) 
-          df <- input$N1-1
-          mult <- sqrt(1/input$N1+input$S2^2/(input$N2*input$S1^2))
-          plot_smd(lambda=ncp,df=df,mult= mult, est = est, b_inf = b_inf, b_sup=b_sup)
+        } else if (Glass_g & Hedges_gprime){
+
+          ggarrange(plot1, plot3, 
+                    ncol = 2, nrow = 1,
+                    common.legend = TRUE)
+
+        } else if (Shieh_g & Hedges_gprime){
+          
+          ggarrange(plot2, plot3, 
+                    ncol = 2, nrow = 1,
+                    common.legend = TRUE)
+          
+        } else if(Glass_g){
+
+          plot1
           
         } else if (Shieh_g){
-        
-          est <- CI_out2$ES
-          b_inf <- CI_out2$CI[1]
-          b_sup <- CI_out2$CI[2]
-          
-          ncp <- (input$M1-input$M2)/ sqrt(input$S1^2/input$N1+input$S2^2/input$N2)
-          df <- ((input$S1^2/input$N1+input$S2^2/input$N2)^2)/((input$S1^2/input$N1)^2/(input$N1-1)+(input$S2^2/input$N2)^2/(input$N2-1))
-          mult <- 1/sqrt(input$N1+input$N2)
-          plot_smd(lambda=ncp,df=df,mult= mult, est = est, b_inf = b_inf, b_sup=b_sup)
+
+          plot2 
           
         } else if (Hedges_gprime){
-        
-          est <- CI_out3$ES
-          b_inf <- CI_out3$CI[1]
-          b_sup <- CI_out3$CI[2]
-          
-          ncp <- (input$M1-input$M2)/ sqrt(input$S1^2/input$N1+input$S2^2/input$N2)
-          df <- ((input$N1-1)*(input$N2-1)*(input$S1^2+input$S2^2)^2)/((input$N2-1)*input$S1^4+(input$N1-1)*input$S2^4)
-          mult <- sqrt((2*(input$N2*input$S1^2+input$N1*input$S2^2))/(input$N1*input$N2*(input$S1^2+input$S2^2)))
-          plot_smd(lambda=ncp,df=df,mult= mult, est = est, b_inf = b_inf, b_sup=b_sup)
+
+          plot3 
           
         }
       
     } else if (input$corr == 0 & input$var == 'No'){
+
+        M1 <- input$M1
+        M2 <- input$M2
+        SD1 <- input$S1
+        SD2 <- input$S2
+        N1 <- input$N1
+        N2 <- input$N2
+        UNBIASED <- F
+        ALT <- input$hyp
       
         Glass_d <- 5       %in% input$EffsizeBHet
         Shieh_d <- 6       %in% input$EffsizeBHet
         Hedges_dprime <- 7      %in% input$EffsizeBHet
 
-        CI_out5<-deffectsize::glass_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,unbiased=F, input$hyp)
-        CI_out6<-deffectsize::shieh_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,unbiased=F, alternative=input$hyp)
-        CI_out7<-deffectsize::cohen_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,var.equal=FALSE,unbiased=F, alternative=input$hyp)
 
-        if(Glass_d){
-          
-          est <- CI_out5$ES
-          b_inf <- CI_out5$CI[1]
-          b_sup <- CI_out5$CI[2]
-          
-          ncp <- ((input$M1-input$M2)/(input$S1*sqrt(1/input$N1+input$S2^2/(input$N2*input$S1^2)))) 
-          df <- input$N1-1
-          mult <- sqrt(1/input$N1+input$S2^2/(input$N2*input$S1^2))
-          plot_smd(lambda=ncp,df=df,mult= mult, est = est, b_inf = b_inf, b_sup=b_sup)
-          
+        FCT1 <- glass_CI
+        DF1 <- N1-1
+        #DF <- input$N1-1
+        LAMBDA1 <- (M1-M2)/(SD1*sqrt(1/N1+SD2^2/(N2*SD1^2)))
+        #LAMBDA <- ((input$M1-input$M2)/(input$S1*sqrt(1/input$N1+input$S2^2/(input$N2*input$S1^2)))) 
+        LABEL1 = "Glass's d"
+        MULT1 <- sqrt(1/N1+SD2^2/(N2*SD1^2))
+        #MULT <- sqrt(1/input$N1+input$S2^2/(input$N2*input$S1^2))
+        CONF.LEVEL1 <-  1-input$alpha
         
-        } else if(Shieh_d){
-
-          est <- CI_out6$ES
-          b_inf <- CI_out6$CI[1]
-          b_sup <- CI_out6$CI[2]
+        DF2 <- ((SD1^2/N1+SD2^2/N2)^2)/((SD1^2/N1)^2/(N1-1)+(SD2^2/N2)^2/(N2-1))
+        #DF <- ((input$S1^2/input$N1+input$S2^2/input$N2)^2)/((input$S1^2/input$N1)^2/(input$N1-1)+(input$S2^2/input$N2)^2/(input$N2-1))
+        LAMBDA2 <- (M1-M2)/ sqrt(SD1^2/N1+SD2^2/N2)  
+        #LAMBDA <- (input$M1-input$M2)/ sqrt(input$S1^2/input$N1+input$S2^2/input$N2)  
+        LABEL2 = "Shieh's d"
+        FCT2 <- shieh_CI
+        MULT2 <- 1/sqrt(N1+N2)
+        #MULT <- 1/sqrt(input$N1+input$N2)
+        CONF.LEVEL2 <-  1-input$alpha
+        
+        DF3 <- ((N1-1)*(N2-1)*(SD1^2+SD2^2)^2)/((N2-1)*SD1^4+(N1-1)*SD2^4)
+        #DF <- ((input$N1-1)*(input$N2-1)*(input$S1^2+input$S2^2)^2)/((input$N2-1)*input$S1^4+(input$N1-1)*input$S2^4)
+        LAMBDA3 <- (M1-M2)/ sqrt(SD1^2/N1+SD2^2/N2)
+        #LAMBDA <- (input$M1-input$M2)/ sqrt(input$S1^2/input$N1+input$S2^2/input$N2)  
+        LABEL3 = "Hedges' d*"
+        FCT3 <- cohen_CI
+        VAR.EQUAL=F
+        MULT3 <- sqrt(1/N1+1/N2)
+        #MULT <- sqrt(1/input$N1+1/input$N2)
+        CONF.LEVEL3 <-  1-input$alpha
+        
           
-          ncp <- (input$M1-input$M2)/ sqrt(input$S1^2/input$N1+input$S2^2/input$N2)
-          df <- ((input$S1^2/input$N1+input$S2^2/input$N2)^2)/((input$S1^2/input$N1)^2/(input$N1-1)+(input$S2^2/input$N2)^2/(input$N2-1))
-          mult <- 1/sqrt(input$N1+input$N2)
-          plot_smd(lambda=ncp,df=df,mult= mult, est = est, b_inf = b_inf, b_sup=b_sup)
+        cdfdat1 = cohen_curv(m1=M1,m2=M2,
+                             sd1=SD1,sd2=SD2,
+                             n1=N1,n2=N2,
+                             steps = 1000,
+                             corr = UNBIASED,
+                             var.equal = FALSE)
+        
+        plot1 <- plot_cohen_curv(smd_label = LABEL1,
+                                 m1=M1,m2=M2,
+                                 sd1=SD1,sd2=SD2,
+                                 n1=N1,n2=N2,
+                                 cdf_dat = cdfdat1[[2]],
+                                 corr = UNBIASED,
+                                 var.equal = FALSE,
+                                 ci_shades = c(.5, .90, .95, .99),
+                                 ci_line = CONF.LEVEL1)
+        
+        cdfdat2 = glass_curv(m1=M1,m2=M2,
+                             sd1=SD1,sd2=SD2,
+                             n1=N1,n2=N2,
+                             steps = 1000,
+                             corr = UNBIASED)
+        
+        plot2 <- plot_glass_curv(smd_label = LABEL2,
+                                 m1=M1,m2=M2,
+                                 sd1=SD1,sd2=SD2,
+                                 n1=N1,n2=N2,
+                                 cdf_dat = cdfdat2[[2]],
+                                 corr = UNBIASED,
+                                 ci_shades = c(.5, .90, .95, .99),
+                                 ci_line = CONF.LEVEL2)
+        
+        cdfdat3 = shieh_curv(m1=M1,m2=M2,
+                             sd1=SD1,sd2=SD2,
+                             n1=N1,n2=N2,
+                             steps = 1000,
+                             corr = UNBIASED)
+        
+        plot3 <- plot_shieh_curv(smd_label = LABEL3,
+                                 m1=M1,m2=M2,
+                                 sd1=SD1,sd2=SD2,
+                                 n1=N1,n2=N2,
+                                 cdf_dat = cdfdat3[[2]],
+                                 corr = UNBIASED,
+                                 ci_shades = c(.5, .90, .95, .99),
+                                 ci_line = CONF.LEVEL3)
           
-        } else if (Hedges_dprime){
-          
-          est <- CI_out7$ES
-          b_inf <- CI_out7$CI[1]
-          b_sup <- CI_out7$CI[2]
-          
-          ncp <- (input$M1-input$M2)/ sqrt(input$S1^2/input$N1+input$S2^2/input$N2)
-          df <- ((input$N1-1)*(input$N2-1)*(input$S1^2+input$S2^2)^2)/((input$N2-1)*input$S1^4+(input$N1-1)*input$S2^4)
-          mult <- sqrt((2*(input$N2*input$S1^2+input$N1*input$S2^2))/(input$N1*input$N2*(input$S1^2+input$S2^2)))
-          plot_smd(lambda=ncp,df=df,mult= mult, est = est, b_inf = b_inf, b_sup=b_sup)
-          
+          if (Glass_d & Shieh_d & Hedges_dprime){
+            
+            ggarrange(plot1, plot2, plot3, 
+                      ncol = 3, nrow = 1,
+                      common.legend = TRUE)
+            
+          } else if (Glass_d & Shieh_d){
+            
+            ggarrange(plot1, plot2, 
+                      ncol = 2, nrow = 1,
+                      common.legend = TRUE)
+            
+          } else if (Glass_d & Hedges_dprime){
+            
+            ggarrange(plot1, plot3, 
+                      ncol = 2, nrow = 1,
+                      common.legend = TRUE)
+            
+          } else if (Shieh_d & Hedges_dprime){
+            
+            ggarrange(plot2, plot3, 
+                      ncol = 2, nrow = 1,
+                      common.legend = TRUE)
+            
+          } else if(Glass_d){
+            
+            plot1
+            
+          } else if (Shieh_d){
+            
+            plot2 
+            
+          } else if (Hedges_dprime){
+            
+            plot3 
+            
           }
+          
 
     } else if (input$corr == 1 & input$var == 'Yes'){
-      
+
+      M1 <- input$M1
+      M2 <- input$M2
+      SD1 <- input$S1
+      SD2 <- input$S2
+      N1 <- input$N1
+      N2 <- input$N2
+      UNBIASED <- T
+      ALT <- input$hyp
+
       Hedges_g <- 4       %in% input$EffsizeUHom
       
-      CI_out4<-deffectsize::cohen_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,var.equal=T,unbiased=T, alternative=input$hyp)
-      est <- CI_out4$ES
-      b_inf <- CI_out4$CI[1]
-      b_sup <- CI_out4$CI[2]
-
       if(Hedges_g){
-
-        lambda <- (input$M1-input$M2)/ (sqrt(((input$N1-1)*input$S1^2+(input$N2-1)*input$S2^2)/(input$N1+input$N2-2))*sqrt(1/input$N1+1/input$N2))
-        df <- input$N1+input$N2-2
-        mult <- sqrt(1/input$N1+1/input$N2)
-        plot_smd(lambda=ncp,df=df,mult= mult, est = est, b_inf = b_inf, b_sup=b_sup)
+        
+        DF <- N1+N2-2
+        #DF <- input$N1+input$N2-2
+        LAMBDA <- (M1-M2)/ (sqrt(((N1-1)*SD1^2+(N2-1)*SD2^2)/(N1+N2-2))*sqrt(1/N1+1/N2))
+        #LAMBDA <- (input$M1-input$M2)/ (sqrt(((input$N1-1)*input$S1^2+(input$N2-1)*input$S2^2)/(input$N1+input$N2-2))*sqrt(1/input$N1+1/input$N2))
+        LABEL = "Hedges' g"
+        FCT <- cohen_CI
+        VAR.EQUAL=T
+        corr <- gamma(DF/2)/(sqrt(DF/2)*gamma((DF-1)/2))
+        MULT <- sqrt(1/N1+1/N2)*corr
+        #MULT <- sqrt(1/input$N1+1/input$N2)*corr
+        CONF.LEVEL <-  1-input$alpha
+        
+        cdfdat1 = cohen_curv(m1=M1,m2=M2,
+                             sd1=SD1,sd2=SD2,
+                             n1=N1,n2=N2,
+                             steps = 1000,
+                             corr = UNBIASED,
+                             var.equal = FALSE)
+        
+        plot1 <- plot_cohen_curv(smd_label = LABEL,
+                                 m1=M1,m2=M2,
+                                 sd1=SD1,sd2=SD2,
+                                 n1=N1,n2=N2,
+                                 cdf_dat = cdfdat1[[2]],
+                                 corr = UNBIASED,
+                                 var.equal = FALSE,
+                                 ci_shades = c(.5, .90, .95, .99),
+                                 ci_line = CONF.LEVEL)
+        plot1
         
       } 
       
     } else if (input$corr == 0 & input$var == 'Yes'){
+
+      M1 <- input$M1
+      M2 <- input$M2
+      SD1 <- input$S1
+      SD2 <- input$S2
+      N1 <- input$N1
+      N2 <- input$N2
+      UNBIASED <- F
+      ALT <- input$hyp
       
       Cohen_d <- 8       %in% input$EffsizeBHom
 
-      CI_out8<-deffectsize::cohen_CI(m1=input$M1,m2=input$M2,sd1=input$S1,sd2=input$S2,n1=input$N1,n2=input$N2,conf.level=1-input$alpha,var.equal=T,unbiased=F, alternative=input$hyp)
-      est <- CI_out8$ES
-      b_inf <- CI_out8$CI[1]
-      b_sup <- CI_out8$CI[2]
-
       if(Cohen_d){
-
-        lambda <- (input$M1-input$M2)/ (sqrt(((input$N1-1)*input$S1^2+(input$N2-1)*input$S2^2)/(input$N1+input$N2-2))*sqrt(1/input$N1+1/input$N2))
-        df <- input$N1+input$N2-2
-        mult <- sqrt(1/input$N1+1/input$N2)
-        plot_smd(lambda=ncp,df=df,mult= mult, est = est, b_inf = b_inf, b_sup=b_sup)
+        
+        DF <- N1+N2-2
+        #DF <- input$N1+input$N2-2
+        LAMBDA <- (M1-M2)/ (sqrt(((N1-1)*SD1^2+(N2-1)*SD2^2)/(N1+N2-2))*sqrt(1/N1+1/N2))
+        #LAMBDA <- (input$M1-input$M2)/ (sqrt(((input$N1-1)*input$S1^2+(input$N2-1)*input$S2^2)/(input$N1+input$N2-2))*sqrt(1/input$N1+1/input$N2))
+        LABEL = "Cohen's d"
+        FCT <- cohen_CI
+        VAR.EQUAL=T
+        MULT <- sqrt(1/N1+1/N2)
+        #MULT <- sqrt(1/input$N1+1/input$N2)
+        
+        CONF.LEVEL <-  1-input$alpha
+        
+        cdfdat1 = cohen_curv(m1=M1,m2=M2,
+                             sd1=SD1,sd2=SD2,
+                             n1=N1,n2=N2,
+                             steps = 1000,
+                             corr = UNBIASED,
+                             var.equal = FALSE)
+        
+        plot1 <- plot_cohen_curv(smd_label = LABEL,
+                                 m1=M1,m2=M2,
+                                 sd1=SD1,sd2=SD2,
+                                 n1=N1,n2=N2,
+                                 cdf_dat = cdfdat1[[2]],
+                                 corr = UNBIASED,
+                                 var.equal = TRUE,
+                                 ci_shades = c(.5, .90, .95, .99),
+                                 ci_line = CONF.LEVEL)
+        plot1
         
       } 
       
     }
     
-  )   
+  )   })
   
 
 }
 
 shinyApp(ui,server)
+
+
