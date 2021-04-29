@@ -103,17 +103,11 @@ gg_curv_t <- function(data,
     if (ncol(data) != 1) {
       stop("Error: 'data' must be a data frame from the curve_boot function in 'concurve'.")
     }
-    if (is.character(title) != TRUE) {
-      stop("Error: 'title' must be a string.")
-    }
-    if (is.character(subtitle) != TRUE) {
-      stop("Error: 'subtitle' must be a string.")
-    }
     if (is.character(fill) != TRUE) {
       stop("Error: 'fill' must be a string for the color.")
     }
 
-    ggplot(data = data, mapping = aes(x = x)) +
+    p1 = ggplot(data = data, mapping = aes(x = x)) +
       geom_density(color = color,
                    alpha = 0.20) +
       labs(
