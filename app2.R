@@ -12,9 +12,8 @@ library(ggpubr)
 
 #  (c) from Aaron Caldwell
 
-#source("gg_curv_t.R")
-source("plot_smd_cdf.R")
-source("curv_scripts.R")
+# This app uses the old cdf calcs
+source("cdf_calcs.R")
 # Define UI 
 
 ui <- fluidPage(
@@ -451,81 +450,44 @@ server = function(input, output) {
       #MULT <- sqrt(1/input$N1+1/input$N2)*corr
       CONF.LEVEL3 <-  1 - input$alpha
       
-      cdfdat1 = cohen_curv(
-        m1 = M1,
-        m2 = M2,
-        sd1 = SD1,
-        sd2 = SD2,
-        n1 = N1,
-        n2 = N2,
-        steps = 1000,
-        corr = UNBIASED,
-        var.equal = FALSE
+      plot1 <- plot_smd_curv(conf.level = CONF.LEVEL1,
+                             fct=FCT1,
+                             df=DF1,
+                             lambda=LAMBDA1,
+                             smd_label = LABEL1,
+                             ci_shades = c(.5, .90, .95, .99),
+                             mult=MULT1, # relation between t stat and estimator
+                             m1=M1,m2=M2,
+                             sd1=SD1,sd2=SD2,
+                             n1=N1,n2=N2,
+                             unbiased=UNBIASED,alternative=ALT
       )
       
-      plot1 <- plot_cohen_curv(
-        smd_label = LABEL1,
-        m1 = M1,
-        m2 = M2,
-        sd1 = SD1,
-        sd2 = SD2,
-        n1 = N1,
-        n2 = N2,
-        cdf_dat = cdfdat1[[2]],
-        corr = UNBIASED,
-        var.equal = FALSE,
-        ci_shades = c(.5, .90, .95, .99),
-        ci_line = CONF.LEVEL1
+      plot2 <- plot_smd_curv(conf.level = CONF.LEVEL2,
+                             fct=FCT2,
+                             df=DF2,
+                             lambda=LAMBDA2,
+                             smd_label = LABEL2,
+                             ci_shades = c(.5, .90, .95, .99),
+                             mult=MULT2, # relation between t stat and estimator
+                             m1=M1,m2=M2,
+                             sd1=SD1,sd2=SD2,
+                             n1=N1,n2=N2,
+                             unbiased=UNBIASED,alternative=ALT
       )
       
-      cdfdat2 = glass_curv(
-        m1 = M1,
-        m2 = M2,
-        sd1 = SD1,
-        sd2 = SD2,
-        n1 = N1,
-        n2 = N2,
-        steps = 1000,
-        corr = UNBIASED
-      )
-      
-      plot2 <- plot_glass_curv(
-        smd_label = LABEL2,
-        m1 = M1,
-        m2 = M2,
-        sd1 = SD1,
-        sd2 = SD2,
-        n1 = N1,
-        n2 = N2,
-        cdf_dat = cdfdat2[[2]],
-        corr = UNBIASED,
-        ci_shades = c(.5, .90, .95, .99),
-        ci_line = CONF.LEVEL2
-      )
-      
-      cdfdat3 = shieh_curv(
-        m1 = M1,
-        m2 = M2,
-        sd1 = SD1,
-        sd2 = SD2,
-        n1 = N1,
-        n2 = N2,
-        steps = 1000,
-        corr = UNBIASED
-      )
-      
-      plot3 <- plot_shieh_curv(
-        smd_label = LABEL3,
-        m1 = M1,
-        m2 = M2,
-        sd1 = SD1,
-        sd2 = SD2,
-        n1 = N1,
-        n2 = N2,
-        cdf_dat = cdfdat3[[2]],
-        corr = UNBIASED,
-        ci_shades = c(.5, .90, .95, .99),
-        ci_line = CONF.LEVEL3
+      plot3 <- plot_smd_curv(conf.level = CONF.LEVEL3,
+                             fct=FCT3,
+                             df=DF3,
+                             lambda=LAMBDA3,
+                             smd_label = LABEL3,
+                             var.equal=VAR.EQUAL,
+                             ci_shades = c(.5, .90, .95, .99),
+                             mult=MULT3, # relation between t stat and estimator
+                             m1=M1,m2=M2,
+                             sd1=SD1,sd2=SD2,
+                             n1=N1,n2=N2,
+                             unbiased=UNBIASED,alternative=ALT
       )
       
       if (Glass_g & Shieh_g & Hedges_gprime) {
@@ -629,81 +591,44 @@ server = function(input, output) {
         CONF.LEVEL3 <-  1 - input$alpha
         
         
-        cdfdat1 = cohen_curv(
-          m1 = M1,
-          m2 = M2,
-          sd1 = SD1,
-          sd2 = SD2,
-          n1 = N1,
-          n2 = N2,
-          steps = 1000,
-          corr = UNBIASED,
-          var.equal = FALSE
+        plot1 <- plot_smd_curv(conf.level = CONF.LEVEL1,
+                               fct=FCT1,
+                               df=DF1,
+                               lambda=LAMBDA1,
+                               smd_label = LABEL1,
+                               ci_shades = c(.5, .90, .95, .99),
+                               mult=MULT1, # relation between t stat and estimator
+                               m1=M1,m2=M2,
+                               sd1=SD1,sd2=SD2,
+                               n1=N1,n2=N2,
+                               unbiased=UNBIASED,alternative=ALT
         )
         
-        plot1 <- plot_cohen_curv(
-          smd_label = LABEL1,
-          m1 = M1,
-          m2 = M2,
-          sd1 = SD1,
-          sd2 = SD2,
-          n1 = N1,
-          n2 = N2,
-          cdf_dat = cdfdat1[[2]],
-          corr = UNBIASED,
-          var.equal = FALSE,
-          ci_shades = c(.5, .90, .95, .99),
-          ci_line = CONF.LEVEL1
+        plot2 <- plot_smd_curv(conf.level = CONF.LEVEL2,
+                               fct=FCT2,
+                               df=DF2,
+                               lambda=LAMBDA2,
+                               smd_label = LABEL2,
+                               ci_shades = c(.5, .90, .95, .99),
+                               mult=MULT2, # relation between t stat and estimator
+                               m1=M1,m2=M2,
+                               sd1=SD1,sd2=SD2,
+                               n1=N1,n2=N2,
+                               unbiased=UNBIASED,alternative=ALT
         )
         
-        cdfdat2 = glass_curv(
-          m1 = M1,
-          m2 = M2,
-          sd1 = SD1,
-          sd2 = SD2,
-          n1 = N1,
-          n2 = N2,
-          steps = 1000,
-          corr = UNBIASED
-        )
-        
-        plot2 <- plot_glass_curv(
-          smd_label = LABEL2,
-          m1 = M1,
-          m2 = M2,
-          sd1 = SD1,
-          sd2 = SD2,
-          n1 = N1,
-          n2 = N2,
-          cdf_dat = cdfdat2[[2]],
-          corr = UNBIASED,
-          ci_shades = c(.5, .90, .95, .99),
-          ci_line = CONF.LEVEL2
-        )
-        
-        cdfdat3 = shieh_curv(
-          m1 = M1,
-          m2 = M2,
-          sd1 = SD1,
-          sd2 = SD2,
-          n1 = N1,
-          n2 = N2,
-          steps = 1000,
-          corr = UNBIASED
-        )
-        
-        plot3 <- plot_shieh_curv(
-          smd_label = LABEL3,
-          m1 = M1,
-          m2 = M2,
-          sd1 = SD1,
-          sd2 = SD2,
-          n1 = N1,
-          n2 = N2,
-          cdf_dat = cdfdat3[[2]],
-          corr = UNBIASED,
-          ci_shades = c(.5, .90, .95, .99),
-          ci_line = CONF.LEVEL3
+        plot3 <- plot_smd_curv(conf.level = CONF.LEVEL3,
+                               fct=FCT3,
+                               df=DF3,
+                               lambda=LAMBDA3,
+                               smd_label = LABEL3,
+                               var.equal=VAR.EQUAL,
+                               ci_shades = c(.5, .90, .95, .99),
+                               mult=MULT3, # relation between t stat and estimator
+                               m1=M1,m2=M2,
+                               sd1=SD1,sd2=SD2,
+                               n1=N1,n2=N2,
+                               unbiased=UNBIASED,alternative=ALT
         )
         
         if (Glass_d & Shieh_d & Hedges_dprime) {
@@ -795,20 +720,18 @@ server = function(input, output) {
               var.equal = FALSE
             )
             
-            plot1 <- plot_cohen_curv(
-              smd_label = LABEL,
-              m1 = M1,
-              m2 = M2,
-              sd1 = SD1,
-              sd2 = SD2,
-              n1 = N1,
-              n2 = N2,
-              cdf_dat = cdfdat1[[2]],
-              corr = UNBIASED,
-              var.equal = FALSE,
-              ci_shades = c(.5, .90, .95, .99),
-              ci_line = CONF.LEVEL
-            )
+            plot1 <- plot_smd_curv(conf.level = CONF.LEVEL,
+                                   fct=FCT,
+                                   df=DF,
+                                   lambda=LAMBDA,
+                                   smd_label = LABEL,
+                                   var.equal=VAR.EQUAL,
+                                   ci_shades = c(.5, .90, .95, .99),
+                                   mult=MULT, # relation between t stat and estimator
+                                   m1=M1,m2=M2,
+                                   sd1=SD1,sd2=SD2,
+                                   n1=N1,n2=N2,
+                                   unbiased=UNBIASED,alternative=ALT)
             v$plot = plot1
             
           }
@@ -840,33 +763,20 @@ server = function(input, output) {
               #MULT <- sqrt(1/input$N1+1/input$N2)
               
               CONF.LEVEL <-  1 - input$alpha
+
               
-              cdfdat1 = cohen_curv(
-                m1 = M1,
-                m2 = M2,
-                sd1 = SD1,
-                sd2 = SD2,
-                n1 = N1,
-                n2 = N2,
-                steps = 1000,
-                corr = UNBIASED,
-                var.equal = FALSE
-              )
-              
-              plot1 <- plot_cohen_curv(
-                smd_label = LABEL,
-                m1 = M1,
-                m2 = M2,
-                sd1 = SD1,
-                sd2 = SD2,
-                n1 = N1,
-                n2 = N2,
-                cdf_dat = cdfdat1[[2]],
-                corr = UNBIASED,
-                var.equal = TRUE,
-                ci_shades = c(.5, .90, .95, .99),
-                ci_line = CONF.LEVEL
-              )
+              plot1 <- plot_smd_curv(conf.level = CONF.LEVEL,
+                                     fct=FCT,
+                                     df=DF,
+                                     lambda=LAMBDA,
+                                     smd_label = LABEL,
+                                     var.equal=VAR.EQUAL,
+                                     ci_shades = c(.5, .90, .95, .99),
+                                     mult=MULT, # relation between t stat and estimator
+                                     m1=M1,m2=M2,
+                                     sd1=SD1,sd2=SD2,
+                                     n1=N1,n2=N2,
+                                     unbiased=UNBIASED,alternative=ALT)
               v$plot = plot1
               
             }

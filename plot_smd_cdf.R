@@ -9,7 +9,7 @@ plot_cohen_curv = function(cdf_dat,
                           corr = TRUE,
                           var.equal = FALSE,
                           ci_shades = c(.5, .90, .95, .99),
-                          ci_line = .90){
+                          ci_line = .95){
   ci_shade1 = sort(ci_shades, decreasing = TRUE)
   
   ci_linerange = cohen_CI(m1 = m1,
@@ -22,6 +22,7 @@ plot_cohen_curv = function(cdf_dat,
                           unbiased = corr,
                           alternative = "two.sided",
                           conf.level = ci_line)$CI
+  
   d = cohen_CI(
     m1 = m1,
     m2 = m2,
@@ -45,7 +46,6 @@ plot_cohen_curv = function(cdf_dat,
                             unbiased = corr,
                             alternative = "two.sided",
                             conf.level = ci_shade1[1])$CI
-  
   cdf_dat2 = cdf_dat$x
   
   x.dens  <- density(cdf_dat2)
@@ -128,6 +128,21 @@ plot_cohen_curv = function(cdf_dat,
   
   return(p2)
 }
+
+
+
+plot_cohen_curv = function(cdf_dat,
+                           smd_label,
+                           m1,
+                           m2,
+                           sd1,
+                           sd2,
+                           n1,
+                           n2,
+                           corr = TRUE,
+                           var.equal = FALSE,
+                           ci_shades = c(.5, .90, .95, .99),
+                           ci_line = .90)
 
 plot_glass_curv = function(cdf_dat,
                           smd_label,
