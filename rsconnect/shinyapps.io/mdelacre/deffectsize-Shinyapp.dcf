@@ -5,9 +5,16 @@ account: mdelacre
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 4038761
+<<<<<<< HEAD
 bundleId: 4526287
 url: https://mdelacre.shinyapps.io/deffectsize-Shinyapp/
 when: 1619545941.62899
 lastSyncTime: 1619545941.62899
+=======
+bundleId: 4550795
+url: https://mdelacre.shinyapps.io/deffectsize-Shinyapp/
+when: 1620049683.99059
+lastSyncTime: 1620049683.99059
+>>>>>>> 65f29ac3b6b13ce2ce2e181caab440da3635c6ee
 asMultiple: FALSE
 asStatic: FALSE
