@@ -1,5 +1,3 @@
-#install_github("mdelacre/deffectsize")
-
 library(shiny)
 library(devtools)
 library(deffectsize)
